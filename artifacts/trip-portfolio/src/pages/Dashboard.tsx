@@ -439,6 +439,7 @@ export default function Dashboard() {
   const { trips, addTrip, resetToDefaults, exportData, importData } = useTrips();
   const [selectedId, setSelectedId] = useState<string | null>(trips[0]?.id ?? null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const selectedTrip = trips.find(t => t.id === selectedId) ?? null;
@@ -462,9 +463,12 @@ export default function Dashboard() {
     const error = importData(text);
     if (error) {
       setImportError(error);
+      setImportSuccess(null);
     } else {
       setImportError(null);
+      setImportSuccess(`✓ "${file.name}" imported successfully — data saved to database and will appear on all devices.`);
       setSelectedId(null);
+      setTimeout(() => setImportSuccess(null), 6000);
     }
     e.target.value = "";
   }, [importData]);
@@ -542,6 +546,22 @@ export default function Dashboard() {
           >
             <span>{importError}</span>
             <button onClick={() => setImportError(null)} className="font-black ml-4 hover:opacity-70">X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Import success banner */}
+      <AnimatePresence>
+        {importSuccess && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b-4 border-black px-6 py-3 flex items-center justify-between font-mono text-sm overflow-hidden"
+            style={{ backgroundColor: "#00C851", color: "white" }}
+          >
+            <span>{importSuccess}</span>
+            <button onClick={() => setImportSuccess(null)} className="font-black ml-4 hover:opacity-70">X</button>
           </motion.div>
         )}
       </AnimatePresence>

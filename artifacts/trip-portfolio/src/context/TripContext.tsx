@@ -44,7 +44,7 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const { data: trips = [], isLoading } = useQuery({
     ...getGetTripsQueryOptions(),
     queryKey: QUERY_KEY,
-    staleTime: 10_000,
+    staleTime: 0,
   });
 
   // Auto-seed database with default trips on first load (empty DB)
@@ -214,15 +214,32 @@ export function TripProvider({ children }: { children: ReactNode }) {
   const importData = useCallback(
     (json: string): string | null => {
       try {
-        const parsed = JSON.parse(json) as Trip[];
-        if (!Array.isArray(parsed)) return "Invalid file: expected an array of trips.";
-        importTripsMutation.mutate({ data: { trips: parsed } });
+        const raw = JSON.parse(json);
+        // Accept both: a plain Trip[] array OR a wrapped { trips: Trip[] } object
+        let tripsArray: Trip[];
+        if (Array.isArray(raw)) {
+          tripsArray = raw;
+        } else if (raw && Array.isArray(raw.trips)) {
+          tripsArray = raw.trips;
+        } else {
+          return "Invalid file: expected an array of trips or { trips: [...] }.";
+        }
+        if (tripsArray.length === 0) return "File contains no trips.";
+        importTripsMutation.mutate(
+          { data: { trips: tripsArray } },
+          {
+            onSuccess: () => {
+              // Force-invalidate so all clients (and other devices on next poll) get fresh data
+              queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+            },
+          }
+        );
         return null;
       } catch {
-        return "Could not parse the file. Make sure it's a valid export.";
+        return "Could not parse the file. Make sure it's a valid JSON export.";
       }
     },
-    [importTripsMutation]
+    [importTripsMutation, queryClient]
   );
 
   return (
