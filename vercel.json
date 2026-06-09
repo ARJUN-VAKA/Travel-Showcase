@@ -1,18 +1,9 @@
 {
+  "name": "travel-showcase",
+  "framework": "vite",
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "artifacts/trip-portfolio/dist/public"
-      }
-    }
-  ],
+  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/db exec drizzle-kit push && pnpm --filter @workspace/trip-portfolio run build && pnpm --filter @workspace/api-server run build",
+  "outputDirectory": "public",
   "rewrites": [
     {
       "source": "/api/(.*)",
