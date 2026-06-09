@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { useRoute, Link } from "wouter";
 import { motion, useInView } from "framer-motion";
 import { useTrips } from "../context/TripContext";
-import { MediaItem } from "../data/trips";
+import type { MediaItem } from "../context/TripContext";
 
 function MediaBlock({ item, index }: { item: MediaItem; index: number }) {
   const ref = useRef(null);

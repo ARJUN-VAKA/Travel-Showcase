@@ -1,135 +1,204 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
-import { TRIPS, Trip, MediaItem } from "../data/trips";
+import { createContext, useContext, useRef, useCallback, useEffect, ReactNode } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  getTrips,
+  getGetTripsQueryKey,
+  getGetTripsQueryOptions,
+  useCreateTrip,
+  useUpdateTrip,
+  useDeleteTrip,
+  useAddMedia,
+  useUpdateMedia,
+  useDeleteMedia,
+  useReorderMedia,
+  useImportTrips,
+} from "@workspace/api-client-react";
+import type { Trip, MediaItem } from "@workspace/api-client-react";
+import { TRIPS } from "../data/trips";
 
-const STORAGE_KEY = "trip-portfolio-data";
+export type { Trip, MediaItem };
 
-function loadFromStorage(): Trip[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as Trip[];
-  } catch {
-    // ignore
-  }
-  return TRIPS;
-}
+const QUERY_KEY = getGetTripsQueryKey();
 
-function saveToStorage(trips: Trip[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(trips));
-  } catch {
-    // ignore (e.g. storage quota exceeded for large base64 images)
-  }
-}
-
-interface TripContextValue {
+type TripContextValue = {
   trips: Trip[];
+  isLoading: boolean;
   updateTrip: (id: string, updates: Partial<Omit<Trip, "id" | "media">>) => void;
-  addTrip: () => void;
+  addTrip: () => string;
   deleteTrip: (id: string) => void;
-  addMedia: (tripId: string, item: MediaItem) => void;
-  updateMedia: (tripId: string, mediaId: string, updates: Partial<MediaItem>) => void;
+  addMedia: (tripId: string, item: Omit<MediaItem, "tripId" | "sortOrder">) => void;
+  updateMedia: (tripId: string, mediaId: string, updates: Partial<Omit<MediaItem, "id" | "tripId" | "sortOrder">>) => void;
   deleteMedia: (tripId: string, mediaId: string) => void;
   reorderMedia: (tripId: string, fromIndex: number, toIndex: number) => void;
   resetToDefaults: () => void;
   exportData: () => void;
   importData: (json: string) => string | null;
-}
+};
 
 const TripContext = createContext<TripContextValue | null>(null);
 
 export function TripProvider({ children }: { children: ReactNode }) {
-  const [trips, setTrips] = useState<Trip[]>(loadFromStorage);
+  const queryClient = useQueryClient();
+  const debounceMap = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  const persist = useCallback((updated: Trip[]) => {
-    setTrips(updated);
-    saveToStorage(updated);
-  }, []);
+  const { data: trips = [], isLoading } = useQuery({
+    ...getGetTripsQueryOptions(),
+    queryKey: QUERY_KEY,
+    staleTime: 10_000,
+  });
 
-  const updateTrip = useCallback((id: string, updates: Partial<Omit<Trip, "id" | "media">>) => {
-    setTrips(prev => {
-      const updated = prev.map(t => t.id === id ? { ...t, ...updates } : t);
-      saveToStorage(updated);
-      return updated;
-    });
-  }, []);
+  // Auto-seed database with default trips on first load (empty DB)
+  const importMutation = useImportTrips();
+  const seededRef = useRef(false);
+  useEffect(() => {
+    if (!isLoading && trips.length === 0 && !seededRef.current) {
+      seededRef.current = true;
+      const defaultTrips = TRIPS.map((t, i) => ({
+        id: t.id,
+        place: t.place,
+        tagline: t.tagline,
+        date: t.date,
+        friendCount: t.friendCount,
+        coverImage: t.coverImage,
+        color: t.color,
+        sortOrder: i,
+        media: t.media.map((m, j) => ({
+          id: m.id,
+          tripId: t.id,
+          type: m.type,
+          src: m.src,
+          caption: m.caption,
+          orientation: m.orientation,
+          timestamp: m.timestamp,
+          sortOrder: j,
+        })),
+      }));
+      importMutation.mutate(
+        { data: { trips: defaultTrips } },
+        { onSuccess: () => queryClient.invalidateQueries({ queryKey: QUERY_KEY }) }
+      );
+    }
+  }, [isLoading, trips.length]);
+
+  const invalidate = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+  }, [queryClient]);
+
+  // Debounced optimistic update helper
+  const debouncedUpdate = useCallback(
+    (debounceKey: string, optimisticFn: (prev: Trip[]) => Trip[], apiFn: () => void, delay = 600) => {
+      // Apply optimistic update immediately
+      queryClient.setQueryData<Trip[]>(QUERY_KEY, (prev) => (prev ? optimisticFn(prev) : prev));
+      // Debounce the API call
+      const existing = debounceMap.current.get(debounceKey);
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(() => {
+        apiFn();
+        debounceMap.current.delete(debounceKey);
+      }, delay);
+      debounceMap.current.set(debounceKey, timer);
+    },
+    [queryClient]
+  );
+
+  const updateTripMutation = useUpdateTrip({ mutation: { onSuccess: invalidate } });
+  const createTripMutation = useCreateTrip({ mutation: { onSuccess: invalidate } });
+  const deleteTripMutation = useDeleteTrip({ mutation: { onSuccess: invalidate } });
+  const addMediaMutation = useAddMedia({ mutation: { onSuccess: invalidate } });
+  const updateMediaMutation = useUpdateMedia({ mutation: { onSuccess: invalidate } });
+  const deleteMediaMutation = useDeleteMedia({ mutation: { onSuccess: invalidate } });
+  const reorderMediaMutation = useReorderMedia({ mutation: { onSuccess: invalidate } });
+  const importTripsMutation = useImportTrips({ mutation: { onSuccess: invalidate } });
+
+  const updateTrip = useCallback(
+    (id: string, updates: Partial<Omit<Trip, "id" | "media">>) => {
+      debouncedUpdate(
+        `trip:${id}`,
+        (prev) => prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+        () => updateTripMutation.mutate({ id, data: updates })
+      );
+    },
+    [debouncedUpdate, updateTripMutation]
+  );
 
   const addTrip = useCallback(() => {
     const id = `trip-${Date.now()}`;
-    const newTrip: Trip = {
-      id,
-      place: "NEW PLACE",
-      tagline: "YOUR TAGLINE HERE",
-      date: "2024",
-      friendCount: 4,
-      coverImage: "",
-      color: "#FFE500",
-      media: [],
+    const newTrip = {
+      id, place: "NEW PLACE", tagline: "YOUR TAGLINE HERE",
+      date: "2024", friendCount: 4, coverImage: "", color: "#FFE500",
+      sortOrder: trips.length,
     };
-    setTrips(prev => {
-      const updated = [...prev, newTrip];
-      saveToStorage(updated);
-      return updated;
-    });
+    createTripMutation.mutate({ data: newTrip });
     return id;
-  }, []);
+  }, [createTripMutation, trips.length]);
 
   const deleteTrip = useCallback((id: string) => {
-    setTrips(prev => {
-      const updated = prev.filter(t => t.id !== id);
-      saveToStorage(updated);
-      return updated;
-    });
-  }, []);
+    deleteTripMutation.mutate({ id });
+  }, [deleteTripMutation]);
 
-  const addMedia = useCallback((tripId: string, item: MediaItem) => {
-    setTrips(prev => {
-      const updated = prev.map(t =>
-        t.id === tripId ? { ...t, media: [...t.media, item] } : t
+  const addMedia = useCallback(
+    (tripId: string, item: Omit<MediaItem, "tripId" | "sortOrder">) => {
+      addMediaMutation.mutate({ id: tripId, data: item });
+    },
+    [addMediaMutation]
+  );
+
+  const updateMedia = useCallback(
+    (tripId: string, mediaId: string, updates: Partial<Omit<MediaItem, "id" | "tripId" | "sortOrder">>) => {
+      debouncedUpdate(
+        `media:${mediaId}`,
+        (prev) =>
+          prev.map((t) =>
+            t.id === tripId
+              ? { ...t, media: t.media.map((m) => (m.id === mediaId ? { ...m, ...updates } : m)) }
+              : t
+          ),
+        () => updateMediaMutation.mutate({ id: tripId, mediaId, data: updates })
       );
-      saveToStorage(updated);
-      return updated;
-    });
-  }, []);
+    },
+    [debouncedUpdate, updateMediaMutation]
+  );
 
-  const updateMedia = useCallback((tripId: string, mediaId: string, updates: Partial<MediaItem>) => {
-    setTrips(prev => {
-      const updated = prev.map(t =>
-        t.id === tripId
-          ? { ...t, media: t.media.map(m => m.id === mediaId ? { ...m, ...updates } : m) }
-          : t
+  const deleteMedia = useCallback(
+    (tripId: string, mediaId: string) => {
+      deleteMediaMutation.mutate({ id: tripId, mediaId });
+    },
+    [deleteMediaMutation]
+  );
+
+  const reorderMedia = useCallback(
+    (tripId: string, fromIndex: number, toIndex: number) => {
+      const trip = trips.find((t) => t.id === tripId);
+      if (!trip) return;
+      const reordered = [...trip.media];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      const orderedIds = reordered.map((m) => m.id);
+
+      // Optimistic update
+      queryClient.setQueryData<Trip[]>(QUERY_KEY, (prev) =>
+        prev
+          ? prev.map((t) => (t.id === tripId ? { ...t, media: reordered } : t))
+          : prev
       );
-      saveToStorage(updated);
-      return updated;
-    });
-  }, []);
-
-  const deleteMedia = useCallback((tripId: string, mediaId: string) => {
-    setTrips(prev => {
-      const updated = prev.map(t =>
-        t.id === tripId ? { ...t, media: t.media.filter(m => m.id !== mediaId) } : t
-      );
-      saveToStorage(updated);
-      return updated;
-    });
-  }, []);
-
-  const reorderMedia = useCallback((tripId: string, fromIndex: number, toIndex: number) => {
-    setTrips(prev => {
-      const updated = prev.map(t => {
-        if (t.id !== tripId) return t;
-        const media = [...t.media];
-        const [moved] = media.splice(fromIndex, 1);
-        media.splice(toIndex, 0, moved);
-        return { ...t, media };
-      });
-      saveToStorage(updated);
-      return updated;
-    });
-  }, []);
+      reorderMediaMutation.mutate({ id: tripId, data: { orderedIds } });
+    },
+    [trips, queryClient, reorderMediaMutation]
+  );
 
   const resetToDefaults = useCallback(() => {
-    persist(TRIPS);
-  }, [persist]);
+    const defaultTrips = TRIPS.map((t, i) => ({
+      id: t.id, place: t.place, tagline: t.tagline, date: t.date,
+      friendCount: t.friendCount, coverImage: t.coverImage, color: t.color,
+      sortOrder: i,
+      media: t.media.map((m, j) => ({
+        id: m.id, tripId: t.id, type: m.type, src: m.src,
+        caption: m.caption, orientation: m.orientation, timestamp: m.timestamp,
+        sortOrder: j,
+      })),
+    }));
+    importTripsMutation.mutate({ data: { trips: defaultTrips } });
+  }, [importTripsMutation]);
 
   const exportData = useCallback(() => {
     const json = JSON.stringify(trips, null, 2);
@@ -142,23 +211,29 @@ export function TripProvider({ children }: { children: ReactNode }) {
     URL.revokeObjectURL(url);
   }, [trips]);
 
-  const importData = useCallback((json: string): string | null => {
-    try {
-      const parsed = JSON.parse(json) as Trip[];
-      if (!Array.isArray(parsed)) return "Invalid file: expected an array of trips.";
-      persist(parsed);
-      return null;
-    } catch {
-      return "Could not parse the file. Make sure it's a valid export.";
-    }
-  }, [persist]);
+  const importData = useCallback(
+    (json: string): string | null => {
+      try {
+        const parsed = JSON.parse(json) as Trip[];
+        if (!Array.isArray(parsed)) return "Invalid file: expected an array of trips.";
+        importTripsMutation.mutate({ data: { trips: parsed } });
+        return null;
+      } catch {
+        return "Could not parse the file. Make sure it's a valid export.";
+      }
+    },
+    [importTripsMutation]
+  );
 
   return (
-    <TripContext.Provider value={{
-      trips, updateTrip, addTrip, deleteTrip,
-      addMedia, updateMedia, deleteMedia, reorderMedia, resetToDefaults,
-      exportData, importData,
-    }}>
+    <TripContext.Provider
+      value={{
+        trips, isLoading,
+        updateTrip, addTrip, deleteTrip,
+        addMedia, updateMedia, deleteMedia, reorderMedia,
+        resetToDefaults, exportData, importData,
+      }}
+    >
       {children}
     </TripContext.Provider>
   );
@@ -169,3 +244,6 @@ export function useTrips() {
   if (!ctx) throw new Error("useTrips must be used within TripProvider");
   return ctx;
 }
+
+// Re-export for direct use
+export { getTrips, getGetTripsQueryKey };

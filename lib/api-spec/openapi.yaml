@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: trips
+    description: Trip portfolio operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,208 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /trips:
+    get:
+      operationId: getTrips
+      tags: [trips]
+      summary: List all trips with their media
+      responses:
+        "200":
+          description: List of trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trip"
+    post:
+      operationId: createTrip
+      tags: [trips]
+      summary: Create a new trip
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TripInput"
+      responses:
+        "201":
+          description: Created trip
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+
+  /trips/import:
+    post:
+      operationId: importTrips
+      tags: [trips]
+      summary: Bulk import trips (replaces all existing)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TripsImport"
+      responses:
+        "200":
+          description: Imported trips
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Trip"
+
+  /trips/{id}:
+    patch:
+      operationId: updateTrip
+      tags: [trips]
+      summary: Update a trip's fields
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TripUpdate"
+      responses:
+        "200":
+          description: Updated trip
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Trip"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteTrip
+      tags: [trips]
+      summary: Delete a trip and all its media
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
+  /trips/{id}/media:
+    post:
+      operationId: addMedia
+      tags: [trips]
+      summary: Add a media item to a trip
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaItemInput"
+      responses:
+        "201":
+          description: Created media item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaItem"
+    put:
+      operationId: reorderMedia
+      tags: [trips]
+      summary: Reorder media items for a trip
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaReorder"
+      responses:
+        "200":
+          description: Reordered media
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MediaItem"
+
+  /trips/{id}/media/{mediaId}:
+    patch:
+      operationId: updateMedia
+      tags: [trips]
+      summary: Update a media item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaItemUpdate"
+      responses:
+        "200":
+          description: Updated media item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteMedia
+      tags: [trips]
+      summary: Delete a media item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: mediaId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +238,100 @@ components:
       required:
         - status
 
+    MediaItem:
+      type: object
+      required: [id, tripId, type, src, caption, orientation, timestamp, sortOrder]
+      properties:
+        id:          { type: string }
+        tripId:      { type: string }
+        type:        { type: string }
+        src:         { type: string }
+        caption:     { type: string }
+        orientation: { type: string }
+        timestamp:   { type: string }
+        sortOrder:   { type: integer }
+
+    MediaItemInput:
+      type: object
+      required: [id, type, src, caption, orientation, timestamp]
+      properties:
+        id:          { type: string }
+        type:        { type: string }
+        src:         { type: string }
+        caption:     { type: string }
+        orientation: { type: string }
+        timestamp:   { type: string }
+
+    MediaItemUpdate:
+      type: object
+      properties:
+        type:        { type: string }
+        src:         { type: string }
+        caption:     { type: string }
+        orientation: { type: string }
+        timestamp:   { type: string }
+
+    MediaReorder:
+      type: object
+      required: [orderedIds]
+      properties:
+        orderedIds:
+          type: array
+          items:
+            type: string
+
+    Trip:
+      type: object
+      required: [id, place, tagline, date, friendCount, coverImage, color, sortOrder, media]
+      properties:
+        id:          { type: string }
+        place:       { type: string }
+        tagline:     { type: string }
+        date:        { type: string }
+        friendCount: { type: integer }
+        coverImage:  { type: string }
+        color:       { type: string }
+        sortOrder:   { type: integer }
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/MediaItem"
+
+    TripInput:
+      type: object
+      required: [id, place]
+      properties:
+        id:          { type: string }
+        place:       { type: string }
+        tagline:     { type: string }
+        date:        { type: string }
+        friendCount: { type: integer }
+        coverImage:  { type: string }
+        color:       { type: string }
+        sortOrder:   { type: integer }
+
+    TripUpdate:
+      type: object
+      properties:
+        place:       { type: string }
+        tagline:     { type: string }
+        date:        { type: string }
+        friendCount: { type: integer }
+        coverImage:  { type: string }
+        color:       { type: string }
+        sortOrder:   { type: integer }
+
+    TripsImport:
+      type: object
+      required: [trips]
+      properties:
+        trips:
+          type: array
+          items:
+            $ref: "#/components/schemas/Trip"
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }

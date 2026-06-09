@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from "react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTrips } from "../context/TripContext";
-import { MediaItem, Trip } from "../data/trips";
+import type { MediaItem, Trip } from "../context/TripContext";
 
 const ACCENT_COLORS = [
   { label: "Yellow", value: "#FFE500" },
