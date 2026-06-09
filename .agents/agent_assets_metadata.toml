@@ -1,0 +1,86 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "FAdlgD4FVOc0G1hmi83CW"
+uri = "file://artifacts/trip-portfolio/src/assets/images/goa-cover.png"
+type = "image"
+title = "Goa beaches vivid travel"
+
+[[generated]]
+id = "hw2EXtqAzwm_HgO-xbVA2"
+uri = "file://artifacts/trip-portfolio/src/assets/images/manali-cover.png"
+type = "image"
+title = "Manali mountains snow travel"
+
+[[generated]]
+id = "p_r_shflgJVsa6EqWRVHu"
+uri = "file://artifacts/trip-portfolio/src/assets/images/rishikesh-cover.png"
+type = "image"
+title = "Rishikesh river rafting travel"
+
+[[generated]]
+id = "wX-iV2dMO_sd3TygX_Jwd"
+uri = "file://artifacts/trip-portfolio/src/assets/images/jaipur-cover.png"
+type = "image"
+title = "Jaipur palaces travel"
+
+[[generated]]
+id = "bPVoaGssywE9X4EJMkw1T"
+uri = "file://artifacts/trip-portfolio/src/assets/images/coorg-cover.png"
+type = "image"
+title = "Coorg coffee plantations travel"
+
+[[generated]]
+id = "AvpXWBp0VW-goF0757Gup"
+uri = "file://artifacts/trip-portfolio/src/assets/images/meghalaya-cover.png"
+type = "image"
+title = "Meghalaya living root bridges"
+
+[[generated]]
+id = "SiMA-X7bNUYMCkwpUgwNT"
+uri = "file://artifacts/trip-portfolio/src/assets/images/goa-1.png"
+type = "image"
+title = "Goa beach sunset travel"
+
+[[generated]]
+id = "MIbA61CsldxmLYUL7n104"
+uri = "file://artifacts/trip-portfolio/src/assets/images/goa-2.png"
+type = "image"
+title = "Goa local street colorful"
+
+[[generated]]
+id = "qVjsPYvgIqR7BfB-osloi"
+uri = "file://artifacts/trip-portfolio/src/assets/images/goa-3.png"
+type = "image"
+title = "Goa seafood platter vibrant"
+
+[[generated]]
+id = "nbD0bxxwQPDtpLaI7yll7"
+uri = "file://artifacts/trip-portfolio/src/assets/images/goa-4.png"
+type = "image"
+title = "Goa scooter ride green"
+
+[[generated]]
+id = "cH4BZsEmYCpR07ZdAe8hz"
+uri = "file://attached_assets/generated_images/cozy_wooden_cafe_interior_70b5.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "NTwVUnFdBar76bpMp1IJR"
+uri = "file://attached_assets/generated_images/narrow_busy_mall_road_ca9d.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "cK-23XBYSC7Uu3FDMxzWl"
+uri = "file://attached_assets/generated_images/friends_group_arriving_at_1355.png"
+type = "image"
+title = "generated_image"
+
+[[generated]]
+id = "4unKevsM_44k5OtBybGI2"
+uri = "file://attached_assets/generated_images/friends_paragliding_over_manali_9c97.png"
+type = "image"
+title = "generated_image"
