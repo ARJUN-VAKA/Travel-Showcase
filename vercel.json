@@ -2,7 +2,7 @@
   "name": "travel-showcase",
   "framework": "vite",
   "version": 2,
-  "buildCommand": "pnpm install --frozen-lockfile && pnpm --filter @workspace/db exec drizzle-kit push && pnpm --filter @workspace/trip-portfolio run build && pnpm --filter @workspace/api-server run build",
+  "buildCommand": "bash build.sh",
   "outputDirectory": "vercel-dist",
   "rewrites": [
     {
