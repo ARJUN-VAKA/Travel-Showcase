@@ -1,0 +1,13 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "npm install -g pnpm && pnpm install --frozen-lockfile && NODE_ENV=production pnpm --filter @workspace/trip-portfolio run build && pnpm --filter @workspace/api-server run build"
+  },
+  "deploy": {
+    "startCommand": "NODE_ENV=production node artifacts/api-server/dist/index.mjs",
+    "healthcheckPath": "/api/healthz",
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  }
+}
