@@ -436,8 +436,10 @@ function TripEditor({ trip, onClose }: { trip: Trip; onClose: () => void }) {
 }
 
 export default function Dashboard() {
-  const { trips, addTrip, resetToDefaults } = useTrips();
+  const { trips, addTrip, resetToDefaults, exportData, importData } = useTrips();
   const [selectedId, setSelectedId] = useState<string | null>(trips[0]?.id ?? null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
   const selectedTrip = trips.find(t => t.id === selectedId) ?? null;
 
@@ -452,6 +454,20 @@ export default function Dashboard() {
       setSelectedId(trips[0]?.id ?? null);
     }
   }, [resetToDefaults, trips]);
+
+  const handleImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const error = importData(text);
+    if (error) {
+      setImportError(error);
+    } else {
+      setImportError(null);
+      setSelectedId(null);
+    }
+    e.target.value = "";
+  }, [importData]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -472,7 +488,7 @@ export default function Dashboard() {
             Dashboard
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={handleAddTrip}
             className="border-4 border-black px-4 py-2 font-bold uppercase text-sm bg-accent hover:bg-black hover:text-white transition-colors"
@@ -481,6 +497,29 @@ export default function Dashboard() {
           >
             + New Trip
           </button>
+          <button
+            onClick={exportData}
+            className="border-4 border-black px-4 py-2 font-bold uppercase text-sm bg-white hover:bg-black hover:text-white transition-colors"
+            style={{ boxShadow: "3px 3px 0 black" }}
+            data-testid="export-btn"
+          >
+            Export
+          </button>
+          <label
+            className="border-4 border-black px-4 py-2 font-bold uppercase text-sm bg-white hover:bg-black hover:text-white transition-colors cursor-pointer"
+            style={{ boxShadow: "3px 3px 0 black" }}
+            data-testid="import-label"
+          >
+            Import
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={handleImportFile}
+              data-testid="import-input"
+            />
+          </label>
           <button
             onClick={handleReset}
             className="border-4 border-black px-4 py-2 font-bold uppercase text-sm bg-white hover:bg-black hover:text-white transition-colors"
@@ -491,6 +530,21 @@ export default function Dashboard() {
           </button>
         </div>
       </header>
+
+      {/* Import error banner */}
+      <AnimatePresence>
+        {importError && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="border-b-4 border-black bg-destructive text-white px-6 py-3 flex items-center justify-between font-mono text-sm overflow-hidden"
+          >
+            <span>{importError}</span>
+            <button onClick={() => setImportError(null)} className="font-black ml-4 hover:opacity-70">X</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Body */}
       <div className="flex flex-1 min-h-0 overflow-hidden">

@@ -31,6 +31,8 @@ interface TripContextValue {
   deleteMedia: (tripId: string, mediaId: string) => void;
   reorderMedia: (tripId: string, fromIndex: number, toIndex: number) => void;
   resetToDefaults: () => void;
+  exportData: () => void;
+  importData: (json: string) => string | null;
 }
 
 const TripContext = createContext<TripContextValue | null>(null);
@@ -129,10 +131,33 @@ export function TripProvider({ children }: { children: ReactNode }) {
     persist(TRIPS);
   }, [persist]);
 
+  const exportData = useCallback(() => {
+    const json = JSON.stringify(trips, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "trip-portfolio-data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [trips]);
+
+  const importData = useCallback((json: string): string | null => {
+    try {
+      const parsed = JSON.parse(json) as Trip[];
+      if (!Array.isArray(parsed)) return "Invalid file: expected an array of trips.";
+      persist(parsed);
+      return null;
+    } catch {
+      return "Could not parse the file. Make sure it's a valid export.";
+    }
+  }, [persist]);
+
   return (
     <TripContext.Provider value={{
       trips, updateTrip, addTrip, deleteTrip,
       addMedia, updateMedia, deleteMedia, reorderMedia, resetToDefaults,
+      exportData, importData,
     }}>
       {children}
     </TripContext.Provider>
