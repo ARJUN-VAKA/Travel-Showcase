@@ -1,9 +1,10 @@
+import React from "react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useTrips } from "../context/TripContext";
 
 export default function Home() {
-  const { trips } = useTrips();
+  const { trips, isLoading } = useTrips();
 
   const containerVars = {
     hidden: { opacity: 0 },
@@ -21,13 +22,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background w-full pb-20">
       <header className="border-b-4 border-black bg-primary px-6 py-12 md:py-20 flex flex-col items-center justify-center text-center shadow-md relative overflow-hidden">
-        <motion.div
+        <motion.div 
           initial={{ rotate: -5, scale: 0.8, opacity: 0 }}
           animate={{ rotate: 0, scale: 1, opacity: 1 }}
           transition={{ type: "spring", bounce: 0.5 }}
           className="absolute -top-10 -left-10 w-40 h-40 bg-secondary rounded-full border-4 border-black"
         />
-        <motion.div
+        <motion.div 
           initial={{ rotate: 10, scale: 0.8, opacity: 0 }}
           animate={{ rotate: 0, scale: 1, opacity: 1 }}
           transition={{ type: "spring", bounce: 0.5, delay: 0.1 }}
@@ -39,67 +40,42 @@ export default function Home() {
         <p className="mt-6 text-xl md:text-2xl font-bold bg-black text-white px-4 py-2 uppercase border-2 border-black inline-block relative z-10 shadow-[4px_4px_0_0_rgba(255,45,85,1)]">
           The ultimate friends trip scrapbook
         </p>
-
-        {/* Dashboard link */}
-        <Link
-          href="/dashboard"
-          className="mt-6 relative z-10 inline-block border-4 border-black px-5 py-2 font-bold uppercase text-sm bg-white text-black hover:bg-black hover:text-white transition-colors"
-          style={{ boxShadow: "4px 4px 0 black" }}
-          data-testid="link-dashboard"
-        >
-          Edit Dashboard
-        </Link>
       </header>
 
       <main className="max-w-7xl mx-auto px-6 mt-16">
-        {trips.length === 0 ? (
-          <div className="text-center border-4 border-dashed border-black p-20">
-            <h2 className="text-4xl font-black uppercase">No trips yet.</h2>
-            <p className="font-mono mt-2 text-muted-foreground">Head to the Dashboard to add your first adventure.</p>
-            <Link
-              href="/dashboard"
-              className="mt-6 inline-block border-4 border-black px-6 py-3 font-bold uppercase bg-primary hover:bg-black hover:text-white transition-colors"
-              style={{ boxShadow: "4px 4px 0 black" }}
-            >
-              Open Dashboard
-            </Link>
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-3xl font-black uppercase tracking-widest animate-pulse border-4 border-black p-6 bg-primary shadow-[4px_4px_0_0_rgba(0,0,0,1)]">Loading Database...</div>
           </div>
         ) : (
-          <motion.div
-            variants={containerVars}
-            initial="hidden"
+          <motion.div 
+            variants={containerVars} 
+            initial="hidden" 
             animate="show"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10"
           >
             {trips.map((trip) => (
               <motion.div key={trip.id} variants={itemVars}>
-                <Link href={`/trip/${trip.id}`} className="block group" data-testid={`card-trip-${trip.id}`}>
+                <Link href={`/trip/${trip.id}`} className="block group">
                   <div className="bg-card border-4 border-black shadow-md transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-xl relative overflow-visible h-full flex flex-col">
-
+                    
                     {/* Image container */}
                     <div className="relative aspect-[4/3] w-full border-b-4 border-black overflow-hidden bg-muted">
-                      {trip.coverImage ? (
-                        <img
-                          src={trip.coverImage}
-                          alt={trip.place}
-                          className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-muted">
-                          <span className="font-black uppercase text-muted-foreground text-lg">No Cover</span>
-                        </div>
-                      )}
-
+                      <img 
+                        src={trip.coverImage} 
+                        alt={trip.place} 
+                        className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500 scale-105 group-hover:scale-100"
+                      />
+                      
                       {/* Badge */}
-                      <div
+                      <div 
                         className="absolute top-4 left-4 border-4 border-black px-4 py-2 shadow-sm font-black text-2xl uppercase tracking-wider text-black transform -rotate-2 group-hover:rotate-0 transition-transform"
                         style={{ backgroundColor: trip.color }}
-                        data-testid={`badge-place-${trip.id}`}
                       >
                         {trip.place}
                       </div>
                     </div>
-
+                    
                     {/* Content */}
                     <div className="p-6 flex-1 flex flex-col">
                       <h3 className="text-2xl font-bold uppercase line-clamp-1">{trip.tagline}</h3>
@@ -108,7 +84,7 @@ export default function Home() {
                         <span className="border-2 border-black px-2 py-1 bg-white">{trip.friendCount} FRIENDS</span>
                       </div>
                     </div>
-
+                    
                   </div>
                 </Link>
               </motion.div>
